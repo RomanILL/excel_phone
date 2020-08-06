@@ -1,7 +1,7 @@
 import os
 from glob import glob
 import func_xlsx_base as ffp
-
+from make_phone_func import make_good_phone_list
 
 if __name__ == "__main__":
 
@@ -36,7 +36,6 @@ if __name__ == "__main__":
 
     # проверяем папки назначения (откуда брать, куда класть, вспомогательная)
     ffp.check_destination_folders((dir_input_files, dir_output_files, dir_supporting_files))
-
 
     # собираем список файлов для обработки
     phone_base_files_list = glob(f'{dir_input_files}\\*.xlsx')
@@ -87,16 +86,16 @@ if __name__ == "__main__":
             # блок обработки файла
             # берем первый по индексу лист
             current_xlsx_obj.active = 0
-            active_sheet = current_xlsx_obj.active
+
             numbers_rows = current_xlsx_obj.active.max_row
-            numbers_cols = len(heads)
+            numbers_cols = current_xlsx_obj.active.max_column
 
             for i_row in range(2, numbers_rows + 1):
                 row_for_write = []
                 extend_row = [None, None, None, None, None, None]
                 """ "Страна", "Город Юр.лица", "Город Факт.", "Регион", "Регион по номеру", "Телефон по формату" """
                 """ [27, 28, 29, 30, 31, 32] """
-                for j_col in range(1, numbers_cols+ 1):
+                for j_col in range(1, numbers_cols + 1):
                     # индексы заголовков, где что лежит
                     """
                     parent_city_head_id = 0 родитель
@@ -122,21 +121,25 @@ if __name__ == "__main__":
                         extend_row[2] = city_name
                 # определяем регион и страну по городу (приоритет фактическому адресу)
                 if extend_row[2] is not None:
-                    extend_row[0] = cities_dict[extend_row[2]][2]
+
+                    extend_row[0] = cities_dict[extend_row[2]][0]
                     extend_row[3] = cities_dict[extend_row[2]][1]
                 elif extend_row[1] is not None:
-                    extend_row[0] = cities_dict[extend_row[1]][2]
+                    extend_row[0] = cities_dict[extend_row[1]][0]
                     extend_row[3] = cities_dict[extend_row[1]][1]
                 # определяем регион по номеру машины
                 for region_id in region_dict:
                     if region_id in row_for_write[vehicle_number_head_id]:
                         extend_row[4] = region_dict[region_id]
+
                 # блок работы с телефонами
                 # находим сотовые телефоны и приводим их к стандартному виду
+                phone_numbers_string = row_for_write[phones_list_head_id]
                 # получаем список мобильных телефонов компании
-                company_phone_list = ffp.make_good_phone_list(row_for_write[phones_list_head_id])
+                company_phone_list = make_good_phone_list(phone_numbers_string)
                 # получаем список мобильных телефонов водителя
-                driver_phone_list = ffp.make_good_phone_list(row_for_write[driver_phone_head_id])
+                phone_numbers_string = row_for_write[driver_phone_head_id]
+                driver_phone_list = make_good_phone_list(phone_numbers_string)
                 all_phone_list = company_phone_list + driver_phone_list
                 row_for_write.extend(extend_row)
                 for write_phone in all_phone_list:
